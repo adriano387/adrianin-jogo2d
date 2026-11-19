@@ -49,3 +49,20 @@ button {
     border: none;
     border-radius: 8px;
 }
+#botoes-celular {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+}
+
+#botoes-celular button {
+  font-size: 30px;
+  padding: 15px 25px;
+  border-radius: 15px;
+  background: white;
+  border: 2px solid black;
+}

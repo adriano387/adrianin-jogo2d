@@ -336,3 +336,23 @@ function gameLoop() {
 // INICIAR
 restartGame();
 gameLoop();
+// Botões do celular
+function apertar(tecla) {
+  document.dispatchEvent(new KeyboardEvent('keydown', {key: tecla}));
+}
+function soltar(tecla) {
+  document.dispatchEvent(new KeyboardEvent('keyup', {key: tecla}));
+}
+
+let btnEsq = document.getElementById('btn-esquerda');
+let btnDir = document.getElementById('btn-direita');
+let btnPular = document.getElementById('btn-pular');
+
+btnEsq.addEventListener('touchstart', () => apertar('ArrowLeft'));
+btnEsq.addEventListener('touchend', () => soltar('ArrowLeft'));
+
+btnDir.addEventListener('touchstart', () => apertar('ArrowRight'));
+btnDir.addEventListener('touchend', () => soltar('ArrowRight'));
+
+btnPular.addEventListener('touchstart', () => apertar(' '));
+btnPular.addEventListener('touchend', () => soltar(' '));
