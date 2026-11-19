@@ -33,18 +33,22 @@
   let btnMusica = document.getElementById('btn-musica');
   let tocando = false;
 
-  function ligarMusica() {
-    if (!tocando) {
-      musica.play();
-      btnMusica.textContent = '🔇 Parar';
+function ligarMusica() {
+  if (!tocando) {
+    musica.play().then(() => {
       tocando = true;
-    }
+      btnMusica.textContent = '⏸️ Parar';
+    }).catch(() => {});
   }
+}
 
-
-  document.addEventListener('touchstart', ligarMusica, true);
-  document.addEventListener('click', ligarMusica, true);
+  document.addEventListener('touchstart', ligarMusica);
+  document.addEventListener('click', ligarMusica);
   document.addEventListener('keydown', ligarMusica);
+  document.getElementById('btn-pular').addEventListener('touchstart', ligarMusica);
+document.getElementById('btn-pular').addEventListener('click', ligarMusica);
+document.getElementById('btn-esquerda').addEventListener('touchstart', ligarMusica);
+document.getElementById('btn-direita').addEventListener('touchstart', ligarMusica);
 
   btnMusica.addEventListener('click', (e) => {
   e.stopPropagation();
