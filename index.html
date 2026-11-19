@@ -47,7 +47,8 @@
   document.addEventListener('click', ligarMusica);
   document.addEventListener('keydown', ligarMusica);
 
-  btnMusica.addEventListener('click', () => {
+  btnMusica.addEventListener('click', (e) => {
+  e.stopPropagation();
     if (tocando) {
       musica.pause();
       btnMusica.textContent = '🔊 Música';
