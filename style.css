@@ -66,3 +66,11 @@ button {
   background: white;
   border: 2px solid black;
 }
+#botoes-celular {
+  z-index: 9999;
+}
+#botoes-celular button {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

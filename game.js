@@ -336,23 +336,38 @@ function gameLoop() {
 // INICIAR
 restartGame();
 gameLoop();
-// Botões do celular
-function apertar(tecla) {
-  document.dispatchEvent(new KeyboardEvent('keydown', {key: tecla}));
+// Botões do celular - VERSÃO FINAL
+function apertar(code) {
+  if (typeof keys !== 'undefined') {
+    keys[code] = true;
+  }
+  document.dispatchEvent(new KeyboardEvent('keydown', {code: code, bubbles: true}));
+  if (code === 'Space') {
+    if (typeof gameOver !== 'undefined' && gameOver) {
+      restartGame();
+    }
+  }
 }
-function soltar(tecla) {
-  document.dispatchEvent(new KeyboardEvent('keyup', {key: tecla}));
+function soltar(code) {
+  if (typeof keys !== 'undefined') {
+    keys[code] = false;
+  }
+  document.dispatchEvent(new KeyboardEvent('keyup', {code: code, bubbles: true}));
 }
 
 let btnEsq = document.getElementById('btn-esquerda');
 let btnDir = document.getElementById('btn-direita');
 let btnPular = document.getElementById('btn-pular');
 
-btnEsq.addEventListener('touchstart', () => apertar('ArrowLeft'));
-btnEsq.addEventListener('touchend', () => soltar('ArrowLeft'));
+function ligarBotao(botao, code) {
+  botao.addEventListener('touchstart', (e) => { e.preventDefault(); apertar(code); }, {passive: false});
+  botao.addEventListener('touchend', (e) => { e.preventDefault(); soltar(code); });
+  botao.addEventListener('touchcancel', () => soltar(code));
+  botao.addEventListener('mousedown', () => apertar(code));
+  botao.addEventListener('mouseup', () => soltar(code));
+  botao.addEventListener('mouseleave', () => soltar(code));
+}
 
-btnDir.addEventListener('touchstart', () => apertar('ArrowRight'));
-btnDir.addEventListener('touchend', () => soltar('ArrowRight'));
-
-btnPular.addEventListener('touchstart', () => apertar(' '));
-btnPular.addEventListener('touchend', () => soltar(' '));
+ligarBotao(btnEsq, 'ArrowLeft');
+ligarBotao(btnDir, 'ArrowRight');
+ligarBotao(btnPular, 'Space');
