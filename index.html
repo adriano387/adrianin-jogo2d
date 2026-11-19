@@ -25,23 +25,45 @@
   <button id="btn-direita">➡️</button>
 </div>
    <script src="game.js"></script>
-   <audio id="musica" src="msc.mp3" loop></audio>
-<button id="btn-musica" style="position: fixed; top: 10px; right: 10px; font-size: 24px; z-index: 9999; padding: 8px 12px; border-radius: 10px; border: none;">🔊 Música</button>
+  <audio id="musica" src="msc.mp3" loop></audio>
+<button id="btn-musica" style="position: fixed; top: 10px; right: 10px; font-size: 24px; z-index: 9999; padding: 8px 12px; border-radius: 10px; border: none;">🔇 Parar</button>
 
 <script>
   let musica = document.getElementById('musica');
   let btnMusica = document.getElementById('btn-musica');
   let tocando = false;
 
-  btnMusica.addEventListener('click', () => {
+  function ligarMusica() {
     if (!tocando) {
       musica.play();
       btnMusica.textContent = '🔇 Parar';
       tocando = true;
-    } else {
+    }
+  }
+
+  ligarMusica();
+
+  document.addEventListener('touchstart', ligarMusica);
+  document.addEventListener('click', ligarMusica);
+  document.addEventListener('keydown', ligarMusica);
+
+  btnMusica.addEventListener('click', () => {
+    if (tocando) {
       musica.pause();
       btnMusica.textContent = '🔊 Música';
       tocando = false;
+    } else {
+      ligarMusica();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      musica.pause();
+    } else {
+      if (tocando) {
+        musica.play();
+      }
     }
   });
 </script>
