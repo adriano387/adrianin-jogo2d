@@ -42,8 +42,8 @@
   }
 
 
-  document.addEventListener('touchstart', ligarMusica);
-  document.addEventListener('click', ligarMusica);
+  document.addEventListener('touchstart', ligarMusica, true);
+  document.addEventListener('click', ligarMusica, true);
   document.addEventListener('keydown', ligarMusica);
 
   btnMusica.addEventListener('click', (e) => {
