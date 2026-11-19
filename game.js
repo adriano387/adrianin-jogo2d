@@ -265,7 +265,7 @@ function updatePlayer() {
 document.addEventListener("keyup", function(event) {
     keys[event.code] = false;
 });
-}
+
 
 // VERIFICAR COLISÃO
 function checkCollision(player, obstacle) {
