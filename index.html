@@ -9,12 +9,14 @@
   body { background: #87CEEB; overflow: hidden; font-family: Arial; touch-action: none; }
   #game { display: block; width: 100vw; height: 100vh; background: #87CEEB; }
   #placar { position: fixed; top: 10px; left: 10px; font-size: 22px; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #000; z-index: 10; }
-  #aviso { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+  #aviso { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+  #btnTelaCheia { position: fixed; top: 10px; right: 10px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
 </style>
 </head>
 <body>
 
 <div id="placar">Pontos: 0</div>
+<button id="btnTelaCheia">⛶</button>
 <canvas id="game"></canvas>
 <div id="aviso">TOQUE NA TELA PARA PULAR</div>
 
@@ -29,11 +31,58 @@ function ajustar() {
 ajustar();
 window.addEventListener('resize', ajustar);
 
+document.getElementById('btnTelaCheia').addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
 let pontos = 0;
-let player = { x: 50, y: 0, w: 40, h: 50, vy: 0, pulando: false };
+let player = { x: 50, y: 0, w: 48, h: 45, vy: 0, pulando: false };
 let chao = 0;
 let obstaculos = [];
 let gameOver = false;
+let deslocamentoPista = 0;
+let deslocamentoRuaFundo = 0;
+let tempo = 0;
+
+// ANIMAÇÃO DO COMEÇO - MENINO + CACHORRO + COLEIRA
+let tela = 'inicio';
+let tempoIntro = 0;
+let meninoX = -60;
+let cachorroIntroX = -120;
+let coleiraQuebrou = false;
+let tituloApareceu = false;
+
+let predios = [];
+function criarJanelasDoPredio() {
+  let janelas = [];
+  for (let ly = 0; ly < 6; ly++) {
+    for (let lx = 0; lx < 3; lx++) {
+      janelas.push({ col: lx, linha: ly, acesa: Math.random() < 0.6 });
+    }
+  }
+  return janelas;
+}
+function criarUmPredio(x) {
+  let largura = 55 + Math.random() * 60;
+  let altura = 100 + Math.random() * 160;
+  let cor = ['#6A7F8D','#7A8FA0','#5B6B7A','#8D9AA6','#708090'][Math.floor(Math.random()*5)];
+  return { x: x, w: largura, h: altura, cor: cor, janelas: criarJanelasDoPredio() };
+}
+function criarPredios() {
+  predios = [];
+  let x = 0;
+  while (x < canvas.width + 300) {
+    let p = criarUmPredio(x);
+    predios.push(p);
+    x += p.w + 15 + Math.random() * 25;
+  }
+}
+criarPredios();
 
 function resetar() {
   chao = canvas.height - 80;
@@ -44,10 +93,17 @@ function resetar() {
   gameOver = false;
   document.getElementById('placar').innerText = 'Pontos: 0';
 }
-
 resetar();
 
 function pular() {
+  if (tela === 'inicio') {
+    // Só deixa começar depois que o cachorro já se soltou e o título apareceu
+    if (tempoIntro > 300) {
+      tela = 'jogando';
+      document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR';
+    }
+    return;
+  }
   if (gameOver) { resetar(); return; }
   if (!player.pulando) {
     player.vy = -16;
@@ -55,81 +111,381 @@ function pular() {
   }
 }
 
-// AQUI É O SEGREDO: CLICOU / TOCOU NA TELA = PULA
-// Sem nenhum botão!
 canvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
   pular();
 }, {passive: false});
-
 canvas.addEventListener('mousedown', pular);
 document.addEventListener('keydown', function(e) {
   if (e.code === 'Space') pular();
 });
 
 function criarObstaculo() {
-  let altura = 30 + Math.random() * 40;
-  obstaculos.push({ x: canvas.width, y: chao - altura, w: 30, h: altura });
+  if (tela !== 'jogando') return;
+  let tipo = Math.random() < 0.5 ? 'carro' : 'casa';
+  if (tipo === 'carro') {
+    obstaculos.push({ x: canvas.width, y: chao - 45, w: 70, h: 45, tipo: 'carro', cor: ['#FFD700','#FF4500','#00BFFF','#32CD32'][Math.floor(Math.random()*4)] });
+  } else {
+    obstaculos.push({ x: canvas.width, y: chao - 85, w: 70, h: 85, tipo: 'casa', cor: ['#FF8C00','#FF69B4','#8A2BE2','#FFF'][Math.floor(Math.random()*4)] });
+  }
+}
+setInterval(() => { if (!gameOver) criarObstaculo(); }, 1500);
+
+function desenharCarro(o) {
+  ctx.fillStyle = o.cor;
+  ctx.fillRect(o.x, o.y + 15, o.w, 30);
+  ctx.fillRect(o.x + 12, o.y, 42, 18);
+  ctx.fillStyle = '#B0E0E6';
+  ctx.fillRect(o.x + 17, o.y + 3, 32, 12);
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(o.x + 16, o.y + 45, 9, 0, Math.PI*2);
+  ctx.arc(o.x + 54, o.y + 45, 9, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(o.x + 16, o.y + 45, 3, 0, Math.PI*2);
+  ctx.arc(o.x + 54, o.y + 45, 3, 0, Math.PI*2);
+  ctx.fill();
 }
 
-setInterval(() => {
-  if (!gameOver) criarObstaculo();
-}, 1400);
+function desenharCasa(o) {
+  ctx.fillStyle = o.cor;
+  ctx.fillRect(o.x, o.y + 30, o.w, 55);
+  ctx.fillStyle = '#8B0000';
+  ctx.beginPath();
+  ctx.moveTo(o.x - 5, o.y + 32);
+  ctx.lineTo(o.x + o.w/2, o.y);
+  ctx.lineTo(o.x + o.w + 5, o.y + 32);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#5C3317';
+  ctx.fillRect(o.x + o.w/2 - 10, o.y + 55, 20, 30);
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(o.x + 8, o.y + 40, 14, 14);
+}
+
+function desenharRuaDeTras() {
+  ctx.fillStyle = '#8E8E8E';
+  ctx.fillRect(0, chao - 28, canvas.width, 8);
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(0, chao - 20, canvas.width, 20);
+  ctx.fillStyle = '#FFD700';
+  for (let x = -deslocamentoRuaFundo; x < canvas.width; x += 60) {
+    ctx.fillRect(x, chao - 12, 30, 4);
+  }
+  if (tela === 'jogando' && !gameOver) {
+    deslocamentoRuaFundo += 1;
+    if (deslocamentoRuaFundo >= 60) deslocamentoRuaFundo = 0;
+  }
+}
+
+function desenharPredios() {
+  for (let i = 0; i < predios.length; i++) {
+    let p = predios[i];
+    ctx.fillStyle = p.cor;
+    ctx.fillRect(p.x, chao - 20 - p.h, p.w, p.h);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(p.x + p.w/2 - 1, chao - 20 - p.h - 15, 2, 15);
+    for (let j of p.janelas) {
+      let jx = p.x + 6 + j.col * (p.w / 3);
+      let jy = chao - 20 - p.h + 10 + j.linha * 22;
+      if (jx + 10 < p.x + p.w - 4 && jy + 12 < chao - 25) {
+        ctx.fillStyle = j.acesa ? '#FFEB99' : '#3A4A56';
+        ctx.fillRect(jx, jy, 10, 12);
+      }
+    }
+    if (tela === 'jogando' && !gameOver) p.x -= 1;
+    if (p.x + p.w < 0) {
+      predios[i] = criarUmPredio(canvas.width + Math.random() * 50);
+    }
+  }
+}
+
+function desenharPista() {
+  ctx.fillStyle = '#B0B0B0';
+  ctx.fillRect(0, chao, canvas.width, 10);
+  ctx.fillStyle = '#3D3D3D';
+  ctx.fillRect(0, chao + 10, canvas.width, 70);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(0, chao + 10, canvas.width, 4);
+  ctx.fillStyle = '#FFFFFF';
+  let tamanhoTraco = 40;
+  let espaco = 30;
+  for (let x = -deslocamentoPista; x < canvas.width; x += tamanhoTraco + espaco) {
+    ctx.fillRect(x, chao + 42, tamanhoTraco, 6);
+  }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, chao + 70, canvas.width, 4);
+  if (tela === 'jogando' && !gameOver) {
+    deslocamentoPista += 6;
+    if (deslocamentoPista >= tamanhoTraco + espaco) deslocamentoPista = 0;
+  }
+}
+
+// CACHORRO - agora pode ter coleira ou não
+function desenharCachorro(x, y, comColeira) {
+  let corre = 0;
+  if (!player.pulando && !gameOver) corre = Math.sin(tempo * 0.25) * 1;
+  let balancoRabo = Math.sin(tempo * 0.4) * 6;
+
+  ctx.strokeStyle = '#D19A5A';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y + 18);
+  ctx.quadraticCurveTo(x - 8, y + 8 + balancoRabo, x - 10, y + balancoRabo);
+  ctx.stroke();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(x - 10, y + balancoRabo, 4, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#8B5A2B';
+  ctx.fillRect(x + 8, y + 32 + corre, 6, 13 - corre);
+  ctx.fillRect(x + 30, y + 32 - corre, 6, 13 + corre);
+
+  ctx.fillStyle = '#D19A5A';
+  ctx.beginPath();
+  ctx.ellipse(x + 22, y + 22, 22, 15, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.ellipse(x + 22, y + 28, 12, 7, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#D19A5A';
+  ctx.beginPath();
+  ctx.arc(x + 40, y + 12, 15, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#8B5A2B';
+  ctx.beginPath();
+  ctx.ellipse(x + 32, y + 8, 5, 9, 0.4, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.ellipse(x + 50, y + 18, 8, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(x + 54, y + 14, 3, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(x + 42, y + 8, 3.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(x + 43, y + 7, 1.2, 0, Math.PI*2);
+  ctx.fill();
+
+  // COLEIRA VERMELHA no pescoço - só quando ele ainda tá com o menino
+  if (comColeira) {
+    ctx.fillStyle = '#E74C3C';
+    ctx.fillRect(x + 28, y + 18, 8, 4);
+  }
+}
+
+// MENINO LEVANDO O CACHORRO
+function desenharMenino(x, y) {
+  let anda = Math.sin(tempo * 0.3) * 3;
+  // perninhas andando
+  ctx.fillStyle = '#2E86C1';
+  ctx.fillRect(x + 5, y + 35 + anda, 6, 15 - anda);
+  ctx.fillRect(x + 15, y + 35 - anda, 6, 15 + anda);
+  // corpinho - camisa verde
+  ctx.fillStyle = '#2ECC71';
+  ctx.fillRect(x, y + 15, 26, 22);
+  // bracinho segurando a coleira - pra frente
+  ctx.fillStyle = '#F5CBA7';
+  ctx.fillRect(x + 22, y + 18, 14, 6);
+  // cabeça
+  ctx.fillStyle = '#F5CBA7';
+  ctx.beginPath();
+  ctx.arc(x + 13, y + 7, 11, 0, Math.PI*2);
+  ctx.fill();
+  // cabelinho
+  ctx.fillStyle = '#4A2C00';
+  ctx.beginPath();
+  ctx.arc(x + 13, y + 3, 11, Math.PI, Math.PI*2);
+  ctx.fill();
+  // olhinho
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(x + 18, y + 7, 2, 0, Math.PI*2);
+  ctx.fill();
+  // se assustou quando o cachorro fugiu, boquinha de "o"
+  if (coleiraQuebrou) {
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(x + 20, y + 12, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function desenharIntro() {
+  tempoIntro++;
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  let centroX = canvas.width/2 - 60;
+  let cachorroY = chao - 45;
+  let meninoY = chao - 50;
+
+  // FASE 1 - MENINO PASSEANDO COM CACHORRO (0 a 180)
+  if (tempoIntro < 180) {
+    meninoX += 1.2;
+    cachorroIntroX = meninoX + 55;
+    desenharMenino(meninoX, meninoY);
+    desenharCachorro(cachorroIntroX, cachorroY, true);
+    // COLEIRA - linha do menino até o cachorro
+    ctx.strokeStyle = '#E74C3C';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(meninoX + 36, meninoY + 20);
+    ctx.lineTo(cachorroIntroX + 30, cachorroY + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Um dia tranquilo passeando...', canvas.width/2, 90);
+  }
+  // FASE 2 - CACHORRO PUXA A COLEIRA (180 a 240)
+  else if (tempoIntro < 240) {
+    // menino trava, cachorro puxa pra frente
+    cachorroIntroX += 1.5;
+    desenharMenino(meninoX, meninoY);
+    desenharCachorro(cachorroIntroX, cachorroY, true);
+    // coleira esticada
+    ctx.strokeStyle = '#E74C3C';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(meninoX + 36, meninoY + 20);
+    ctx.lineTo(cachorroIntroX + 30, cachorroY + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Ele viu alguma coisa!', canvas.width/2, 90);
+    ctx.fillText('Ele puxou... puxou...', canvas.width/2, 115);
+  }
+  // FASE 3 - SOLTOU! (240 a 300) - coleira quebra
+  else if (tempoIntro < 300) {
+    if (!coleiraQuebrou) coleiraQuebrou = true;
+    // cachorro dispara pra frente, menino fica pra trás assustado
+    cachorroIntroX += 4;
+    desenharMenino(meninoX, meninoY);
+    desenharCachorro(cachorroIntroX, cachorroY, false);
+    // coleira quebrada - pedacinho na mão do menino e pedacinho no cachorro
+    ctx.strokeStyle = '#E74C3C';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(meninoX + 36, meninoY + 20);
+    ctx.lineTo(meninoX + 50, meninoY + 28);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cachorroIntroX + 15, cachorroY + 28);
+    ctx.lineTo(cachorroIntroX + 30, cachorroY + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('SNAP! SOLTOU!', canvas.width/2, 90);
+  }
+  // FASE 4 - CACHORRO LIVRE NO MEIO + TÍTULO (depois de 300)
+  else {
+    tituloApareceu = true;
+    // menino some pra esquerda, fica só o cachorro no meio dando pulinho
+    if (meninoX > -80) meninoX -= 2;
+    if (meninoX > -60) desenharMenino(meninoX, meninoY);
+
+    // cachorro vai até o centro e fica pulando
+    if (cachorroIntroX < centroX) cachorroIntroX += 3;
+    if (cachorroIntroX > centroX) cachorroIntroX = centroX;
+    let pulo = Math.abs(Math.sin(tempo * 0.2)) * -10;
+    desenharCachorro(cachorroIntroX, cachorroY + pulo, false);
+
+    // TÍTULO descendo
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText('CACHORRO', canvas.width/2, canvas.height/2 - 120);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText('AVENTUREIRO', canvas.width/2, canvas.height/2 - 80);
+    ctx.fillStyle = '#FFF';
+    ctx.font = '16px Arial';
+    ctx.fillText('Ele fugiu e agora vai correr pela cidade!', canvas.width/2, canvas.height/2 - 50);
+
+    // TOQUE piscando
+    if (Math.floor(tempo / 30) % 2 === 0) {
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('👆 TOQUE PARA COMEÇAR', canvas.width/2, canvas.height - 120);
+    }
+  }
+}
 
 function atualizar() {
+  tempo++;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#FFF176';
+  ctx.beginPath();
+  ctx.arc(canvas.width - 80, 70, 35, 0, Math.PI*2);
+  ctx.fill();
 
-  // chão
-  ctx.fillStyle = '#2ecc71';
-  ctx.fillRect(0, chao + player.h, canvas.width, 80);
+  desenharRuaDeTras();
+  desenharPredios();
+  desenharPista();
 
-  // gravidade
-  player.vy += 0.8;
-  player.y += player.vy;
-  if (player.y >= chao - player.h) {
-    player.y = chao - player.h;
-    player.vy = 0;
-    player.pulando = false;
-  }
-
-  // jogador
-  ctx.fillStyle = '#e74c3c';
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-  // olhinho
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(player.x + 25, player.y + 10, 10, 10);
-
-  // obstáculos
-  for (let i = 0; i < obstaculos.length; i++) {
-    let o = obstaculos[i];
-    o.x -= 6;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-
-    // colisão
-    if (player.x < o.x + o.w && player.x + player.w > o.x &&
-        player.y < o.y + o.h && player.y + player.h > o.y) {
-      gameOver = true;
+  if (tela === 'inicio') {
+    document.getElementById('aviso').innerText = '';
+    desenharIntro();
+  } else {
+    player.vy += 0.8;
+    player.y += player.vy;
+    if (player.y >= chao - player.h) {
+      player.y = chao - player.h;
+      player.vy = 0;
+      player.pulando = false;
     }
-    if (o.x + o.w < 0) {
-      obstaculos.splice(i, 1);
-      i--;
-      pontos++;
-      document.getElementById('placar').innerText = 'Pontos: ' + pontos;
+    desenharCachorro(player.x, player.y, false);
+
+    for (let i = 0; i < obstaculos.length; i++) {
+      let o = obstaculos[i];
+      o.x -= 6;
+      if (o.tipo === 'carro') desenharCarro(o);
+      else desenharCasa(o);
+
+      if (player.x < o.x + o.w && player.x + player.w > o.x &&
+          player.y < o.y + o.h && player.y + player.h > o.y) {
+        gameOver = true;
+      }
+      if (o.x + o.w < 0) {
+        obstaculos.splice(i, 1);
+        i--;
+        pontos++;
+        document.getElementById('placar').innerText = 'Pontos: ' + pontos;
+      }
+    }
+
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#fff';
+      ctx.font = '30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('PERDEU!', canvas.width/2, canvas.height/2 - 10);
+      ctx.font = '18px Arial';
+      ctx.fillText('Toque na tela para jogar de novo', canvas.width/2, canvas.height/2 + 25);
     }
   }
-
-  if (gameOver) {
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#fff';
-    ctx.font = '30px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('PERDEU!', canvas.width/2, canvas.height/2 - 10);
-    ctx.font = '18px Arial';
-    ctx.fillText('Toque na tela para jogar de novo', canvas.width/2, canvas.height/2 + 25);
-  }
-
   requestAnimationFrame(atualizar);
 }
 atualizar();
