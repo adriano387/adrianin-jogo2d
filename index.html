@@ -2,26 +2,36 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MeuJogo-2d</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #87CEEB; overflow: hidden; font-family: Arial; touch-action: none; }
-  #game { display: block; width: 100vw; height: 100vh; background: #87CEEB; }
-  #placar { position: fixed; top: 10px; left: 10px; font-size: 20px; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #000; z-index: 10; line-height: 1.3; }
-  #aviso { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none; }
-  #btnTelaCheia { position: fixed; top: 10px; right: 10px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
-  #btnPause { position: fixed; top: 10px; right: 56px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
-  #btnSkin { position: fixed; top: 10px; right: 102px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
-  #menu { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
-  #menu h1 { color: #fff; font-size: 32px; text-align: center; }
+  html, body { width: 100%; height: 100%; height: 100dvh; background: #87CEEB; overflow: hidden; font-family: Arial; touch-action: none; }
+  #game { display: block; width: 100vw; height: 100dvh; background: #87CEEB; }
+  #placar { position: fixed; top: 8px; left: 10px; font-size: 17px; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #000; z-index: 10; line-height: 1.25; }
+  #aviso { position: fixed; bottom: 12px; width: 100%; text-align: center; color: #fff; font-weight: bold; font-size: 18px; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
+  #btnTelaCheia { position: fixed; top: 8px; right: 10px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+  #btnPause { position: fixed; top: 8px; right: 56px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+  #btnSkin { position: fixed; top: 8px; right: 102px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+  #menu { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100dvh; background: rgba(0,0,0,0.75); z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow-y: auto; padding: 20px 0; }
+  #menu h1 { color: #fff; font-size: 30px; text-align: center; }
   #menu h1 span { color: #FFD700; }
   #menu p { color: #fff; font-size: 16px; }
-  .btnNivel { width: 260px; padding: 15px; font-size: 20px; font-weight: bold; border: none; border-radius: 12px; color: #fff; }
+  .btnNivel { width: 260px; padding: 13px; font-size: 20px; font-weight: bold; border: none; border-radius: 12px; color: #fff; }
   #btnFacil { background: #2ECC71; }
   #btnMedio { background: #F39C12; }
   #btnDificil { background: #E74C3C; }
   #menu small { color: #ddd; text-align: center; padding: 0 20px; line-height: 1.4; }
+  #rankingBox { background: rgba(255,255,255,0.15); border: 2px solid #FFD700; border-radius: 12px; padding: 10px 15px; width: 260px; color: #fff; }
+  #rankingBox h3 { text-align: center; color: #FFD700; margin-bottom: 6px; font-size: 18px; }
+  #listaRanking { list-style: none; font-size: 15px; line-height: 1.6; }
+  #listaRanking li { border-bottom: 1px solid rgba(255,255,255,0.2); padding: 2px 0; }
+  #telaNome { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 40; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+  #telaNome h2 { color: #FFD700; font-size: 26px; text-align: center; }
+  #telaNome p { color: #fff; font-size: 18px; text-align: center; }
+  #inputNome { width: 260px; padding: 14px; font-size: 18px; border-radius: 10px; border: none; text-align: center; }
+  #btnSalvarNome { width: 260px; padding: 14px; font-size: 18px; font-weight: bold; background: #2ECC71; color: #fff; border: none; border-radius: 10px; }
+  #btnPularNome { background: none; border: none; color: #ccc; font-size: 14px; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -39,7 +49,19 @@
   <button class="btnNivel" id="btnFacil">😊 FÁCIL</button>
   <button class="btnNivel" id="btnMedio">😬 MÉDIO</button>
   <button class="btnNivel" id="btnDificil">😱 DIFÍCIL</button>
+  <div id="rankingBox">
+    <h3>🏆 TOP 5 JOGADORES</h3>
+    <ul id="listaRanking"><li>Ninguém jogou ainda...</li></ul>
+  </div>
   <small>Fácil: normal<br>Médio: muito mais carros e casas<br>Difícil: tudo do médio + caminhões!</small>
+</div>
+
+<div id="telaNome">
+  <h2 id="tituloNome">FIM DE JOGO!</h2>
+  <p id="textoNome">Você fez 0 pontos!</p>
+  <input id="inputNome" type="text" maxlength="12" placeholder="Digite seu nome...">
+  <button id="btnSalvarNome">💾 SALVAR MEU NOME</button>
+  <button id="btnPularNome">pular sem salvar</button>
 </div>
 
 <script>
@@ -49,9 +71,13 @@ const ctx = canvas.getContext('2d');
 function ajustar() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  // CORREÇÃO: chão mais pra baixo no celular deitado, pista ocupa o resto
+  chao = canvas.height - Math.max(90, canvas.height * 0.32);
+  if (player) player.y = Math.min(player.y, chao - player.h);
+  criarCidade();
 }
-ajustar();
 window.addEventListener('resize', ajustar);
+window.addEventListener('orientationchange', () => setTimeout(ajustar, 200));
 
 document.getElementById('btnTelaCheia').addEventListener('click', function(e) {
   e.stopPropagation();
@@ -62,7 +88,7 @@ document.getElementById('btnTelaCheia').addEventListener('click', function(e) {
 let pontos = 0;
 let recorde = parseInt(localStorage.getItem('recordeCachorro') || '0');
 let vidas = 3;
-let player = { x: 50, y: 0, w: 48, h: 45, vy: 0, pulando: false, pulos: 0, invencivel: 0 };
+let player = { x: 50, y: 0, w: 52, h: 50, vy: 0, pulando: false, pulos: 0, invencivel: 0 };
 let chao = 0;
 let obstaculos = [];
 let ossos = [];
@@ -80,6 +106,8 @@ let cachorroIntroX = -120;
 let coleiraQuebrou = false;
 let dificuldade = 'facil';
 let tempoSpawn = 0;
+let rankingSalvo = false;
+let mostrouTelaNome = false;
 
 let skins = [
   { nome: 'Caramelo', corpo: '#D19A5A', orelha: '#8B5A2B' },
@@ -88,6 +116,45 @@ let skins = [
   { nome: 'Chocolate', corpo: '#8B5A2B', orelha: '#4A2C00' }
 ];
 let skinAtual = 0;
+
+let ranking = JSON.parse(localStorage.getItem('rankingCachorro') || '[]');
+function mostrarRanking() {
+  let lista = document.getElementById('listaRanking');
+  if (ranking.length === 0) { lista.innerHTML = '<li>Ninguém jogou ainda...</li>'; return; }
+  let medalhas = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  lista.innerHTML = ranking.map((r, i) => '<li>' + (medalhas[i] || (i+1)+'º') + ' ' + r.nome + ' - ' + r.pontos + ' pts <small>(' + r.nivel + ')</small></li>').join('');
+}
+mostrarRanking();
+
+function mostrarTelaNome(titulo) {
+  if (mostrouTelaNome) return;
+  mostrouTelaNome = true;
+  document.getElementById('tituloNome').innerText = titulo;
+  document.getElementById('textoNome').innerText = 'Você fez ' + pontos + ' pontos no ' + nomeDificuldade() + '!';
+  document.getElementById('inputNome').value = localStorage.getItem('ultimoNome') || '';
+  document.getElementById('telaNome').style.display = 'flex';
+  setTimeout(() => document.getElementById('inputNome').focus(), 100);
+}
+function fecharTelaNome() {
+  document.getElementById('telaNome').style.display = 'none';
+  tela = 'menu';
+  document.getElementById('menu').style.display = 'flex';
+  mostrarRanking();
+}
+function salvarNome() {
+  let nome = document.getElementById('inputNome').value.trim();
+  if (!nome) nome = 'Jogador';
+  localStorage.setItem('ultimoNome', nome);
+  ranking.push({ nome: nome, pontos: pontos, nivel: nomeDificuldade() });
+  ranking.sort((a, b) => b.pontos - a.pontos);
+  ranking = ranking.slice(0, 5);
+  localStorage.setItem('rankingCachorro', JSON.stringify(ranking));
+  rankingSalvo = true;
+  fecharTelaNome();
+}
+document.getElementById('btnSalvarNome').addEventListener('click', salvarNome);
+document.getElementById('btnPularNome').addEventListener('click', () => { rankingSalvo = true; fecharTelaNome(); });
+document.getElementById('inputNome').addEventListener('keydown', function(e) { if (e.key === 'Enter') salvarNome(); });
 
 function escolherNivel(nivel) {
   dificuldade = nivel;
@@ -167,7 +234,6 @@ function criarCidade() {
   while (x < canvas.width + 400) { let p = criarUmPredio(x, 140, 320); prediosFrente.push(p); x += p.w + 8 + Math.random()*25; }
   for (let i = 0; i < 10; i++) { postes.push({ x: i * 220 + 80 + Math.random()*60 }); arvores.push({ x: i * 220 + 180 + Math.random()*60 }); }
 }
-criarCidade();
 
 function atualizarPlacar() {
   let coracoes = '❤️'.repeat(vidas) + '🖤'.repeat(3 - vidas);
@@ -175,30 +241,26 @@ function atualizarPlacar() {
 }
 
 function resetar() {
-  chao = canvas.height - 80;
   player.y = chao - player.h; player.vy = 0; player.pulos = 0; player.invencivel = 0;
   obstaculos = []; ossos = []; particulas = [];
   pontos = 0; vidas = 3; gameOver = false; venceu = false; pausado = false; tempoSpawn = 0;
+  rankingSalvo = false; mostrouTelaNome = false;
   document.getElementById('btnPause').innerText = '⏸';
   atualizarPlacar();
 }
-resetar();
-atualizarPlacar();
 
 function pular() {
   if (pausado) return;
   if (tela === 'menu') return;
+  if (document.getElementById('telaNome').style.display === 'flex') return;
   if (tela === 'inicio') {
     if (tempoIntro > 300) { tela = 'jogando'; document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR'; }
     return;
   }
-  if (gameOver || venceu) {
-    tela = 'menu';
-    document.getElementById('menu').style.display = 'flex';
-    return;
-  }
+  if (gameOver) { mostrarTelaNome('😢 PERDEU!'); return; }
+  if (venceu) { mostrarTelaNome('🎉 VOCÊ VENCEU!'); return; }
   if (player.pulos < 2) {
-    player.vy = -15;
+    player.vy = -16;
     player.pulando = true;
     player.pulos++;
     if (particulas.length < 30) {
@@ -224,7 +286,6 @@ function criarObstaculo() {
   } else {
     obstaculos.push({ x: canvas.width, y: chao - 85, w: 70, h: 85, tipo: 'casa', cor: ['#FF8C00','#FF69B4','#8A2BE2','#FFF'][Math.floor(Math.random()*4)] });
   }
-  // No médio e difícil, chance de vir 2 juntos - no difícil mais espaçado
   if (dificuldade === 'medio' && Math.random() < 0.35) {
     obstaculos.push({ x: canvas.width + 110, y: chao - 45, w: 70, h: 45, tipo: 'carro', cor: ['#FFD700','#FF4500','#00BFFF','#32CD32'][Math.floor(Math.random()*4)] });
   }
@@ -321,8 +382,9 @@ function desenharNuvens() {
 }
 function desenharCidade() {
   let fase = getFase();
+  // CORREÇÃO: pinta a tela INTEIRA, sem sobrar faixa azul
   ctx.fillStyle = fase === 'dia' ? '#87CEEB' : fase === 'noite' ? '#2F4A56' : '#FFB6A0';
-  ctx.fillRect(0, 0, canvas.width, chao + 10);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   desenharSolELua(); desenharNuvens();
   for (let p of prediosFundo) {
     desenharPredio(p, chao - 10);
@@ -340,11 +402,13 @@ function desenharCidade() {
 }
 function desenharPista() {
   let fase = getFase();
-  ctx.fillStyle = fase === 'noite' ? '#3A3F44' : '#4A4A4A'; ctx.fillRect(0, chao + 2, canvas.width, 62);
-  ctx.fillStyle = fase === 'noite' ? '#7A8288' : '#A8A8A8'; ctx.fillRect(0, chao + 64, canvas.width, 14);
-  ctx.fillStyle = '#4A4A4A'; ctx.fillRect(0, chao + 78, canvas.width, 30);
+  let alturaPista = canvas.height - chao;
+  // CORREÇÃO: pista vai até o fim da tela
+  ctx.fillStyle = fase === 'noite' ? '#3A3F44' : '#4A4A4A'; ctx.fillRect(0, chao + 2, canvas.width, alturaPista);
+  ctx.fillStyle = fase === 'noite' ? '#7A8288' : '#A8A8A8'; ctx.fillRect(0, chao + alturaPista - 14, canvas.width, 14);
   ctx.fillStyle = '#DDE3E6'; let tamanhoTraco = 40; let espaco = 30;
-  for (let x = -deslocamentoPista; x < canvas.width; x += tamanhoTraco + espaco) ctx.fillRect(x, chao + 30, tamanhoTraco, 6);
+  let yTraco = chao + alturaPista / 2 - 3;
+  for (let x = -deslocamentoPista; x < canvas.width; x += tamanhoTraco + espaco) ctx.fillRect(x, yTraco, tamanhoTraco, 6);
   if (tela === 'jogando' && !gameOver && !pausado && !venceu) { deslocamentoPista += velocidadeJogo(); if (deslocamentoPista >= tamanhoTraco + espaco) deslocamentoPista = 0; }
 }
 function desenharCachorro(x, y, comColeira) {
@@ -352,7 +416,8 @@ function desenharCachorro(x, y, comColeira) {
   let corre = 0;
   if (!player.pulando && !gameOver && !pausado) corre = Math.sin(tempo * 0.25) * 1;
   let balancoRabo = Math.sin(tempo * 0.4) * 6;
-  if (player.invencivel > 0 && Math.floor(tempo/5)%2===0) ctx.globalAlpha = 0.4;
+  // CORREÇÃO: pisca bem menos, não fica fantasma
+  if (player.invencivel > 0 && Math.floor(tempo/8)%2===0) ctx.globalAlpha = 0.7;
   ctx.strokeStyle = skin.corpo; ctx.lineWidth = 5; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(x + 4, y + 18); ctx.quadraticCurveTo(x - 8, y + 8 + balancoRabo, x - 10, y + balancoRabo); ctx.stroke();
   ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x - 10, y + balancoRabo, 4, 0, Math.PI*2); ctx.fill();
@@ -381,7 +446,7 @@ function desenharMenino(x, y) {
 function desenharIntro() {
   tempoIntro++;
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  let centroX = canvas.width/2 - 60; let cachorroY = chao - 45; let meninoY = chao - 50;
+  let centroX = canvas.width/2 - 60; let cachorroY = chao - 50; let meninoY = chao - 50;
   if (tempoIntro < 180) {
     meninoX += 1.2; cachorroIntroX = meninoX + 55;
     desenharMenino(meninoX, meninoY); desenharCachorro(cachorroIntroX, cachorroY, true);
@@ -426,11 +491,11 @@ function atualizar() {
     desenharCachorro(player.x, player.y, false);
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     desenharMenino(canvas.width/2 - 90, chao - 50);
-    desenharCachorro(canvas.width/2 - 20, chao - 45, true);
+    desenharCachorro(canvas.width/2 - 20, chao - 50, true);
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center'; ctx.fillText('🎉 FINAL FELIZ! 🎉', canvas.width/2, canvas.height/2 - 110);
     ctx.fillStyle = '#fff'; ctx.font = '18px Arial'; ctx.fillText('O menino achou o cachorro!', canvas.width/2, canvas.height/2 - 80);
     ctx.fillText('Você fez ' + pontos + ' pontos no ' + nomeDificuldade() + '!', canvas.width/2, canvas.height/2 - 55);
-    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Arial'; ctx.fillText('Toque para escolher outro nível', canvas.width/2, canvas.height - 100);
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Arial'; ctx.fillText('Toque para salvar seu nome', canvas.width/2, canvas.height - 100);
   } else {
     if (player.invencivel > 0) player.invencivel--;
     player.vy += 0.8; player.y += player.vy;
@@ -476,11 +541,14 @@ function atualizar() {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#fff'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText('PERDEU!', canvas.width/2, canvas.height/2 - 10);
       ctx.font = '18px Arial'; ctx.fillText('Fez ' + pontos + ' pontos no ' + nomeDificuldade() + '! Recorde: ' + recorde, canvas.width/2, canvas.height/2 + 20);
-      ctx.fillText('Toque na tela para escolher outro nível', canvas.width/2, canvas.height/2 + 50);
+      ctx.fillText('Toque na tela para salvar seu nome', canvas.width/2, canvas.height/2 + 50);
     }
   }
   requestAnimationFrame(atualizar);
 }
+ajustar();
+criarCidade();
+resetar();
 atualizar();
 </script>
 </body>
