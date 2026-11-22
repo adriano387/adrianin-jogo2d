@@ -1,76 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MeuJogo-2d</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #87CEEB; overflow: hidden; font-family: Arial; touch-action: none; }
+  #game { display: block; width: 100vw; height: 100vh; background: #87CEEB; }
+  #placar { position: fixed; top: 10px; left: 10px; font-size: 20px; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #000; z-index: 10; line-height: 1.3; }
+  #aviso { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+  #btnTelaCheia { position: fixed; top: 10px; right: 10px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+  #btnPause { position: fixed; top: 10px; right: 56px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+  #btnSkin { position: fixed; top: 10px; right: 102px; width: 38px; height: 38px; font-size: 18px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; border-radius: 8px; z-index: 20; }
+</style>
+</head>
+<body>
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+<div id="placar">Pontos: 0<br>❤️❤️❤️<br>🏆 Recorde: 0</div>
+<button id="btnSkin">🎨</button>
+<button id="btnPause">⏸</button>
+<button id="btnTelaCheia">⛶</button>
+<canvas id="game"></canvas>
+<div id="aviso">TOQUE NA TELA PARA PULAR</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function ajustar() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+ajustar();
+window.addEventListener('resize', ajustar);
+
+document.getElementById('btnTelaCheia').addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+
+let pontos = 0;
+let recorde = parseInt(localStorage.getItem('recordeCachorro') || '0');
+let vidas = 3;
+let player = { x: 50, y: 0, w: 48, h: 45, vy: 0, pulando: false, pulos: 0, invencivel: 0 };
+let chao = 0;
+let obstaculos = [];
+let ossos = [];
+let particulas = [];
+let nuvens = [];
+let gameOver = false;
+let venceu = false;
+let deslocamentoPista = 0;
+let tempo = 0;
+let pausado = false;
+let tela = 'inicio';
+let tempoIntro = 0;
+let meninoX = -60;
+let cachorroIntroX = -120;
+let coleiraQuebrou = false;
+
+let skins = [
+  { nome: 'Caramelo', corpo: '#D19A5A', orelha: '#8B5A2B' },
+  { nome: 'Pretinho', corpo: '#4A4A4A', orelha: '#111111' },
+  { nome: 'Branquinho', corpo: '#F5F5F5', orelha: '#D19A5A' },
+  { nome: 'Chocolate', corpo: '#8B5A2B', orelha: '#4A2C00' }
+];
+let skinAtual = 0;
+
+document.getElementById('btnSkin').addEventListener('click', function(e) {
+  e.stopPropagation();
+  skinAtual = (skinAtual + 1) % skins.length;
+  document.getElementById('aviso').innerText = 'Cachorro: ' + skins[skinAtual].nome;
+  setTimeout(() => { if (tela === 'jogando') document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR'; }, 1500);
+});
+
+document.getElementById('btnPause').addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (tela !== 'jogando') return;
+  pausado = !pausado;
+  this.innerText = pausado ? '▶' : '⏸';
+});
+
+function getFase() {
+  if (pontos < 20) return 'dia';
+  if (pontos < 40) return 'noite';
+  return 'amanhecer';
+}
+function velocidadeJogo() {
+  return Math.min(6 + Math.floor(pontos / 10), 11);
 }
 
-body {
-    background: #222;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: Arial, sans-serif;
+let prediosFundo = [];
+let prediosFrente = [];
+let postes = [];
+let arvores = [];
+let estrelas = [];
+for (let i = 0; i < 40; i++) estrelas.push({ x: Math.random(), y: Math.random() * 0.4 });
+for (let i = 0; i < 5; i++) nuvens.push({ x: Math.random()*800, y: 20 + Math.random()*80, v: 0.5 + Math.random() });
+
+function criarJanelas(w, h) {
+  let janelas = [];
+  let cols = Math.floor(w / 28);
+  let linhas = Math.floor(h / 32);
+  for (let ly = 0; ly < linhas; ly++) for (let lx = 0; lx < cols; lx++) janelas.push({ col: lx, linha: ly, acesa: Math.random() < 0.45 });
+  return janelas;
+}
+function criarUmPredio(x, minH, maxH) {
+  let largura = 60 + Math.random() * 70;
+  let altura = minH + Math.random() * (maxH - minH);
+  return { x: x, w: largura, h: altura, janelas: criarJanelas(largura, altura), antena: Math.random() < 0.6 };
+}
+function criarCidade() {
+  prediosFundo = []; prediosFrente = []; postes = []; arvores = [];
+  let x = -20;
+  while (x < canvas.width + 400) { let p = criarUmPredio(x, 90, 200); prediosFundo.push(p); x += p.w + 10 + Math.random()*20; }
+  x = -20;
+  while (x < canvas.width + 400) { let p = criarUmPredio(x, 140, 320); prediosFrente.push(p); x += p.w + 8 + Math.random()*25; }
+  for (let i = 0; i < 10; i++) { postes.push({ x: i * 220 + 80 + Math.random()*60 }); arvores.push({ x: i * 220 + 180 + Math.random()*60 }); }
+}
+criarCidade();
+
+function atualizarPlacar() {
+  let coracoes = '❤️'.repeat(vidas) + '🖤'.repeat(3 - vidas);
+  document.getElementById('placar').innerHTML = 'Pontos: ' + pontos + '<br>' + coracoes + '<br>🏆 Recorde: ' + recorde;
 }
 
-#gameContainer {
-    position: relative;
-    width: min(900px, 100%);
+function resetar() {
+  chao = canvas.height - 80;
+  player.y = chao - player.h; player.vy = 0; player.pulos = 0; player.invencivel = 0;
+  obstaculos = []; ossos = []; particulas = [];
+  pontos = 0; vidas = 3; gameOver = false; venceu = false; pausado = false;
+  document.getElementById('btnPause').innerText = '⏸';
+  atualizarPlacar();
+}
+resetar();
+atualizarPlacar();
+
+function pular() {
+  if (pausado) return;
+  if (tela === 'inicio') {
+    if (tempoIntro > 300) { tela = 'jogando'; document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR'; }
+    return;
+  }
+  if (gameOver || venceu) { resetar(); return; }
+  if (player.pulos < 2) {
+    player.vy = -15;
+    player.pulando = true;
+    player.pulos++;
+    if (particulas.length < 30) {
+      for (let i=0;i<4;i++) particulas.push({ x: player.x+10, y: player.y+40, vx: -2+Math.random()*2, vy: Math.random()*2, vida: 15 });
+    }
+  }
 }
 
-canvas {
-    display: block;
-    width: 100%;
-    height: auto;
-    background: #87CEEB;
-}
+canvas.addEventListener('touchstart', function(e) { e.preventDefault(); pular(); }, {passive: false});
+canvas.addEventListener('mousedown', pular);
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space') pular();
+  if (e.code === 'KeyP' && tela === 'jogando') { pausado = !pausado; document.getElementById('btnPause').innerText = pausado ? '▶' : '⏸'; }
+});
 
-#gameOver {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+function criarObstaculo() {
+  if (tela !== 'jogando' || pausado || gameOver || venceu) return;
+  let tipo = Math.random() < 0.5 ? 'carro' : 'casa';
+  if (tipo === 'carro') obstaculos.push({ x: canvas.width, y: chao - 45, w: 70, h: 45, tipo: 'carro', cor: ['#FFD700','#FF4500','#00BFFF','#32CD32'][Math.floor(Math.random()*4)] });
+  else obstaculos.push({ x: canvas.width, y: chao - 85, w: 70, h: 85, tipo: 'casa', cor: ['#FF8C00','#FF69B4','#8A2BE2','#FFF'][Math.floor(Math.random()*4)] });
 }
+setInterval(() => { if (!gameOver && !venceu) criarObstaculo(); }, 1400);
 
-#gameOver.hidden {
-    display: none;
+function criarOsso() {
+  if (tela !== 'jogando' || pausado || gameOver || venceu) return;
+  ossos.push({ x: canvas.width, y: chao - 60 - Math.random()*80, w: 30, h: 20 });
 }
+setInterval(criarOsso, 2200);
 
-button {
-    padding: 15px 25px;
-    cursor: pointer;
-    font-size: 18px;
-    border: none;
-    border-radius: 8px;
+function desenharCarro(o) {
+  ctx.fillStyle = o.cor; ctx.fillRect(o.x, o.y + 15, o.w, 30); ctx.fillRect(o.x + 12, o.y, 42, 18);
+  ctx.fillStyle = '#B0E0E6'; ctx.fillRect(o.x + 17, o.y + 3, 32, 12);
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(o.x + 16, o.y + 45, 9, 0, Math.PI*2); ctx.arc(o.x + 54, o.y + 45, 9, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(o.x + 16, o.y + 45, 3, 0, Math.PI*2); ctx.arc(o.x + 54, o.y + 45, 3, 0, Math.PI*2); ctx.fill();
 }
-#botoes-celular {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  position: fixed;
-  bottom: 10px;
-  left: 0;
-  right: 0;
+function desenharCasa(o) {
+  ctx.fillStyle = o.cor; ctx.fillRect(o.x, o.y + 30, o.w, 55);
+  ctx.fillStyle = '#8B0000'; ctx.beginPath(); ctx.moveTo(o.x - 5, o.y + 32); ctx.lineTo(o.x + o.w/2, o.y); ctx.lineTo(o.x + o.w + 5, o.y + 32); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#5C3317'; ctx.fillRect(o.x + o.w/2 - 10, o.y + 55, 20, 30);
+  ctx.fillStyle = '#87CEEB'; ctx.fillRect(o.x + 8, o.y + 40, 14, 14);
 }
-
-#botoes-celular button {
-  font-size: 30px;
-  padding: 15px 25px;
-  border-radius: 15px;
-  background: white;
-  border: 2px solid black;
+function desenharOsso(o) {
+  ctx.fillStyle = '#FFF'; ctx.save(); ctx.translate(o.x+15, o.y+10); ctx.rotate(Math.sin(tempo*0.1)*0.3);
+  ctx.beginPath(); ctx.arc(-8, -5, 5, 0, Math.PI*2); ctx.arc(8, -5, 5, 0, Math.PI*2); ctx.arc(-8, 5, 5, 0, Math.PI*2); ctx.arc(8, 5, 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillRect(-8, -4, 16, 8); ctx.restore();
 }
-#botoes-celular {
-  z-index: 9999;
+function desenharPredio(p, baseY) {
+  let fase = getFase();
+  let corPredio = fase === 'dia' ? '#8D9AA6' : fase === 'noite' ? '#3D4A52' : '#9A7A8A';
+  ctx.fillStyle = corPredio; ctx.fillRect(p.x, baseY - p.h, p.w, p.h);
+  if (p.antena) { ctx.fillStyle = '#222'; ctx.fillRect(p.x + p.w/2 - 1, baseY - p.h - 18, 3, 18); }
+  ctx.fillStyle = fase === 'dia' ? '#3A4A56' : '#1F2A30'; ctx.fillRect(p.x + p.w/2 - 14, baseY - 32, 28, 32);
+  for (let j of p.janelas) {
+    let jx = p.x + 10 + j.col * 28; let jy = baseY - p.h + 14 + j.linha * 32;
+    if (jx + 16 < p.x + p.w - 6 && jy + 18 < baseY - 38) {
+      if (fase === 'noite') ctx.fillStyle = j.acesa ? '#D9B83A' : '#1E2A30';
+      else if (fase === 'amanhecer') ctx.fillStyle = j.acesa ? '#FFD700' : '#6B5A6B';
+      else ctx.fillStyle = j.acesa ? '#B0E0E6' : '#5B6B7A';
+      ctx.fillRect(jx, jy, 16, 18);
+    }
+  }
 }
-#botoes-celular button {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+function desenharPoste(x, baseY) {
+  let noite = getFase() === 'noite';
+  if (noite) {
+    ctx.fillStyle = 'rgba(255, 230, 150, 0.15)'; ctx.beginPath(); ctx.moveTo(x, baseY - 95); ctx.lineTo(x - 45, baseY); ctx.lineTo(x + 45, baseY); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#1F2A30'; ctx.fillRect(x - 3, baseY - 100, 6, 100); ctx.fillRect(x - 3, baseY - 100, 22, 5); ctx.fillRect(x + 14, baseY - 100, 4, 12);
+  ctx.fillStyle = noite ? '#FFE9A0' : '#CCCCCC'; ctx.fillRect(x + 12, baseY - 95, 16, 6);
+  ctx.fillStyle = '#2A363E'; ctx.fillRect(x - 6, baseY - 8, 12, 8);
 }
+function desenharArvore(x, baseY) {
+  ctx.fillStyle = '#6B3F1A'; ctx.fillRect(x - 4, baseY - 30, 8, 30);
+  ctx.fillStyle = '#2E9E4A'; ctx.fillRect(x - 22, baseY - 58, 44, 14); ctx.fillRect(x - 16, baseY - 70, 32, 12); ctx.fillRect(x - 8, baseY - 80, 16, 10);
+  ctx.fillStyle = '#37B355'; ctx.fillRect(x - 16, baseY - 58, 12, 8); ctx.fillRect(x + 4, baseY - 70, 10, 8);
+}
+function desenharSolELua() {
+  let fase = getFase();
+  let x = canvas.width - 80; let y = fase === 'amanhecer' ? 140 : 70;
+  if (fase === 'dia') {
+    ctx.fillStyle = '#FFF176'; ctx.beginPath(); ctx.arc(x, y, 35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255, 241, 118, 0.4)'; ctx.beginPath(); ctx.arc(x, y, 48, 0, Math.PI*2); ctx.fill();
+  } else if (fase === 'noite') {
+    for (let s of estrelas) { ctx.fillStyle = '#FFF'; ctx.fillRect(s.x * canvas.width, s.y * canvas.height, 2, 2); }
+    ctx.fillStyle = '#F0F0F0'; ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#D0D0D0'; ctx.beginPath(); ctx.arc(x - 8, y - 5, 6, 0, Math.PI*2); ctx.arc(x + 10, y + 8, 4, 0, Math.PI*2); ctx.fill();
+  } else {
+    ctx.fillStyle = '#FFA500'; ctx.beginPath(); ctx.arc(x, y, 38, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.4)'; ctx.beginPath(); ctx.arc(x, y, 55, 0, Math.PI*2); ctx.fill();
+  }
+}
+function desenharNuvens() {
+  if (getFase() === 'noite') return;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  for (let n of nuvens) {
+    ctx.beginPath(); ctx.arc(n.x, n.y, 18, 0, Math.PI*2); ctx.arc(n.x+20, n.y, 22, 0, Math.PI*2); ctx.arc(n.x+40, n.y, 18, 0, Math.PI*2); ctx.fill();
+    if (tela === 'jogando' && !pausado && !gameOver && !venceu) n.x -= n.v;
+    if (n.x < -60) { n.x = canvas.width + 40; n.y = 20 + Math.random()*80; }
+  }
+}
+function desenharCidade() {
+  let fase = getFase();
+  ctx.fillStyle = fase === 'dia' ? '#87CEEB' : fase === 'noite' ? '#2F4A56' : '#FFB6A0';
+  ctx.fillRect(0, 0, canvas.width, chao + 10);
+  desenharSolELua(); desenharNuvens();
+  for (let p of prediosFundo) {
+    desenharPredio(p, chao - 10);
+    if (tela === 'jogando' && !gameOver && !pausado && !venceu) p.x -= 0.5;
+    if (p.x + p.w < -20) { let novo = criarUmPredio(canvas.width + 20, 90, 200); p.x = novo.x; p.w = novo.w; p.h = novo.h; p.janelas = novo.janelas; p.antena = novo.antena; }
+  }
+  for (let p of prediosFrente) {
+    desenharPredio(p, chao - 10);
+    if (tela === 'jogando' && !gameOver && !pausado && !venceu) p.x -= 1;
+    if (p.x + p.w < -20) { let novo = criarUmPredio(canvas.width + 20, 140, 320); p.x = novo.x; p.w = novo.w; p.h = novo.h; p.janelas = novo.janelas; p.antena = novo.antena; }
+  }
+  ctx.fillStyle = fase === 'noite' ? '#7A8288' : '#A8A8A8'; ctx.fillRect(0, chao - 10, canvas.width, 12);
+  for (let poste of postes) { desenharPoste(poste.x, chao - 10); if (tela === 'jogando' && !gameOver && !pausado && !venceu) poste.x -= 1.5; if (poste.x < -60) poste.x = canvas.width + 100 + Math.random()*100; }
+  for (let arv of arvores) { desenharArvore(arv.x, chao - 10); if (tela === 'jogando' && !gameOver && !pausado && !venceu) arv.x -= 1.5; if (arv.x < -60) arv.x = canvas.width + 100 + Math.random()*100; }
+}
+function desenharPista() {
+  let fase = getFase();
+  ctx.fillStyle = fase === 'noite' ? '#3A3F44' : '#4A4A4A'; ctx.fillRect(0, chao + 2, canvas.width, 62);
+  ctx.fillStyle = fase === 'noite' ? '#7A8288' : '#A8A8A8'; ctx.fillRect(0, chao + 64, canvas.width, 14);
+  ctx.fillStyle = '#4A4A4A'; ctx.fillRect(0, chao + 78, canvas.width, 30);
+  ctx.fillStyle = '#DDE3E6'; let tamanhoTraco = 40; let espaco = 30;
+  for (let x = -deslocamentoPista; x < canvas.width; x += tamanhoTraco + espaco) ctx.fillRect(x, chao + 30, tamanhoTraco, 6);
+  if (tela === 'jogando' && !gameOver && !pausado && !venceu) { deslocamentoPista += velocidadeJogo(); if (deslocamentoPista >= tamanhoTraco + espaco) deslocamentoPista = 0; }
+}
+function desenharCachorro(x, y, comColeira) {
+  let skin = skins[skinAtual];
+  let corre = 0;
+  if (!player.pulando && !gameOver && !pausado) corre = Math.sin(tempo * 0.25) * 1;
+  let balancoRabo = Math.sin(tempo * 0.4) * 6;
+  if (player.invencivel > 0 && Math.floor(tempo/5)%2===0) ctx.globalAlpha = 0.4;
+  ctx.strokeStyle = skin.corpo; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + 4, y + 18); ctx.quadraticCurveTo(x - 8, y + 8 + balancoRabo, x - 10, y + balancoRabo); ctx.stroke();
+  ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x - 10, y + balancoRabo, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = skin.orelha; ctx.fillRect(x + 8, y + 32 + corre, 6, 13 - corre); ctx.fillRect(x + 30, y + 32 - corre, 6, 13 + corre);
+  ctx.fillStyle = skin.corpo; ctx.beginPath(); ctx.ellipse(x + 22, y + 22, 22, 15, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(x + 22, y + 28, 12, 7, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = skin.corpo; ctx.beginPath(); ctx.arc(x + 40, y + 12, 15, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = skin.orelha; ctx.beginPath(); ctx.ellipse(x + 32, y + 8, 5, 9, 0.4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(x + 50, y + 18, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x + 54, y + 14, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x + 42, y + 8, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x + 43, y + 7, 1.2, 0, Math.PI*2); ctx.fill();
+  if (comColeira) { ctx.fillStyle = '#E74C3C'; ctx.fillRect(x + 28, y + 18, 8, 4); }
+  ctx.globalAlpha = 1;
+}
+function desenharMenino(x, y) {
+  let anda = Math.sin(tempo * 0.3) * 3;
+  ctx.fillStyle = '#2E86C1'; ctx.fillRect(x + 5, y + 35 + anda, 6, 15 - anda); ctx.fillRect(x + 15, y + 35 - anda, 6, 15 + anda);
+  ctx.fillStyle = '#2ECC71'; ctx.fillRect(x, y + 15, 26, 22);
+  ctx.fillStyle = '#F5CBA7'; ctx.fillRect(x + 22, y + 18, 14, 6);
+  ctx.fillStyle = '#F5CBA7'; ctx.beginPath(); ctx.arc(x + 13, y + 7, 11, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#4A2C00'; ctx.beginPath(); ctx.arc(x + 13, y + 3, 11, Math.PI, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x + 18, y + 7, 2, 0, Math.PI*2); ctx.fill();
+  if (coleiraQuebrou) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x + 20, y + 12, 3, 0, Math.PI*2); ctx.fill(); }
+}
+function desenharIntro() {
+  tempoIntro++;
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  let centroX = canvas.width/2 - 60; let cachorroY = chao - 45; let meninoY = chao - 50;
+  if (tempoIntro < 180) {
+    meninoX += 1.2; cachorroIntroX = meninoX + 55;
+    desenharMenino(meninoX, meninoY); desenharCachorro(cachorroIntroX, cachorroY, true);
+    ctx.strokeStyle = '#E74C3C'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(meninoX + 36, meninoY + 20); ctx.lineTo(cachorroIntroX + 30, cachorroY + 20); ctx.stroke();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.fillText('Um dia tranquilo passeando...', canvas.width/2, 90);
+  } else if (tempoIntro < 240) {
+    cachorroIntroX += 1.5; desenharMenino(meninoX, meninoY); desenharCachorro(cachorroIntroX, cachorroY, true);
+    ctx.strokeStyle = '#E74C3C'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(meninoX + 36, meninoY + 20); ctx.lineTo(cachorroIntroX + 30, cachorroY + 20); ctx.stroke();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.fillText('Ele viu alguma coisa!', canvas.width/2, 90); ctx.fillText('Ele puxou... puxou...', canvas.width/2, 115);
+  } else if (tempoIntro < 300) {
+    if (!coleiraQuebrou) coleiraQuebrou = true;
+    cachorroIntroX += 4; desenharMenino(meninoX, meninoY); desenharCachorro(cachorroIntroX, cachorroY, false);
+    ctx.strokeStyle = '#E74C3C'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(meninoX + 36, meninoY + 20); ctx.lineTo(meninoX + 50, meninoY + 28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cachorroIntroX + 15, cachorroY + 28); ctx.lineTo(cachorroIntroX + 30, cachorroY + 20); ctx.stroke();
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center'; ctx.fillText('SNAP! SOLTOU!', canvas.width/2, 90);
+  } else {
+    if (meninoX > -80) meninoX -= 2; if (meninoX > -60) desenharMenino(meninoX, meninoY);
+    if (cachorroIntroX < centroX) cachorroIntroX += 3; if (cachorroIntroX > centroX) cachorroIntroX = centroX;
+    let pulo = Math.abs(Math.sin(tempo * 0.2)) * -10; desenharCachorro(cachorroIntroX, cachorroY + pulo, false);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#FFF'; ctx.font = 'bold 36px Arial'; ctx.fillText('CACHORRO', canvas.width/2, canvas.height/2 - 120);
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 36px Arial'; ctx.fillText('AVENTUREIRO', canvas.width/2, canvas.height/2 - 80);
+    ctx.fillStyle = '#FFF'; ctx.font = '16px Arial'; ctx.fillText('Ele fugiu e agora vai correr pela cidade!', canvas.width/2, canvas.height/2 - 50);
+    if (Math.floor(tempo / 30) % 2 === 0) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 20px Arial'; ctx.fillText('👆 TOQUE PARA COMEÇAR', canvas.width/2, canvas.height - 120); }
+  }
+}
+function atualizar() {
+  if (pausado) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 36px Arial'; ctx.textAlign = 'center'; ctx.fillText('⏸ PAUSADO', canvas.width/2, canvas.height/2 - 10);
+    ctx.font = '16px Arial'; ctx.fillText('Aperte ▶ para continuar', canvas.width/2, canvas.height/2 + 25);
+    requestAnimationFrame(atualizar); return;
+  }
+  tempo++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  desenharCidade(); desenharPista();
+  if (tela === 'inicio') {
+    document.getElementById('aviso').innerText = ''; desenharIntro();
+  } else if (venceu) {
+    desenharCachorro(player.x, player.y, false);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    desenharMenino(canvas.width/2 - 90, chao - 50);
+    desenharCachorro(canvas.width/2 - 20, chao - 45, true);
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center'; ctx.fillText('🎉 FINAL FELIZ! 🎉', canvas.width/2, canvas.height/2 - 110);
+    ctx.fillStyle = '#fff'; ctx.font = '18px Arial'; ctx.fillText('O menino achou o cachorro!', canvas.width/2, canvas.height/2 - 80);
+    ctx.fillText('Você fez ' + pontos + ' pontos!', canvas.width/2, canvas.height/2 - 55);
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Arial'; ctx.fillText('Toque para jogar de novo', canvas.width/2, canvas.height - 100);
+  } else {
+    if (player.invencivel > 0) player.invencivel--;
+    player.vy += 0.8; player.y += player.vy;
+    if (player.y >= chao - player.h) { player.y = chao - player.h; player.vy = 0; player.pulando = false; player.pulos = 0; }
+    if (!player.pulando && particulas.length < 30 && Math.random() < 0.5) particulas.push({ x: player.x, y: player.y + 42, vx: -2 - Math.random()*2, vy: -1 + Math.random(), vida: 15 });
+    for (let i = particulas.length - 1; i >= 0; i--) {
+      let pt = particulas[i]; pt.x += pt.vx; pt.y += pt.vy; pt.vida--;
+      ctx.fillStyle = 'rgba(180,180,180,0.6)'; ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2); ctx.fill();
+      if (pt.vida <= 0) particulas.splice(i, 1);
+    }
+    desenharCachorro(player.x, player.y, false);
+    let vel = velocidadeJogo();
+    for (let i = 0; i < obstaculos.length; i++) {
+      let o = obstaculos[i]; o.x -= vel;
+      if (o.tipo === 'carro') desenharCarro(o); else desenharCasa(o);
+      if (player.invencivel === 0 && player.x < o.x + o.w && player.x + player.w > o.x && player.y < o.y + o.h && player.y + player.h > o.y) {
+        vidas--; player.invencivel = 90; atualizarPlacar();
+        if (vidas <= 0) gameOver = true;
+      }
+      if (o.x + o.w < 0) {
+        obstaculos.splice(i, 1); i--; pontos++; atualizarPlacar();
+        if (pontos === 20) { document.getElementById('aviso').innerText = 'VIROU NOITE! 🌙'; setTimeout(() => { if (tela === 'jogando') document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR'; }, 2000); }
+        if (pontos === 40) { document.getElementById('aviso').innerText = 'AMANHECEU! 🌅'; setTimeout(() => { if (tela === 'jogando') document.getElementById('aviso').innerText = 'TOQUE NA TELA PARA PULAR'; }, 2000); }
+        if (pontos >= 50 && !venceu) { venceu = true; }
+        if (pontos > recorde) { recorde = pontos; localStorage.setItem('recordeCachorro', recorde); atualizarPlacar(); }
+      }
+    }
+    for (let i = ossos.length - 1; i >= 0; i--) {
+      let o = ossos[i]; o.x -= vel; desenharOsso(o);
+      if (player.x < o.x + o.w && player.x + player.w > o.x && player.y < o.y + o.h && player.y + player.h > o.y) {
+        ossos.splice(i, 1); pontos += 2; atualizarPlacar();
+        if (pontos >= 50 && !venceu) { venceu = true; }
+        if (pontos > recorde) { recorde = pontos; localStorage.setItem('recordeCachorro', recorde); atualizarPlacar(); }
+        continue;
+      }
+      if (o.x + o.w < 0) ossos.splice(i, 1);
+    }
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#fff'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText('PERDEU!', canvas.width/2, canvas.height/2 - 10);
+      ctx.font = '18px Arial'; ctx.fillText('Fez ' + pontos + ' pontos! Recorde: ' + recorde, canvas.width/2, canvas.height/2 + 20);
+      ctx.fillText('Toque na tela para jogar de novo', canvas.width/2, canvas.height/2 + 50);
+    }
+  }
+  requestAnimationFrame(atualizar);
+}
+atualizar();
+</script>
+</body>
+</html>
